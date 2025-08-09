@@ -46,10 +46,12 @@ def saltation_model(f, D, H, W, theta, r0, qb=None, D50=None, tau_c50=None, Q0=N
         zeta = alpha/(1-alpha)
     if eta is None:
         eta = 0
-    # Seismic velocities
-    vc = vc0*(f/f0)**(-zeta)
-    vu = vc/(1+zeta)
+    # Seismic model
 
+    vc = vc0*(f/f0)**(-zeta) # group velocity
+    vu = vc/(1+zeta) # phase velocity
+
+    # Seismic wave attenuation
     f = np.asarray(f)
     Q = Q0 * (f/f0)**eta
     beta = 2 * np.pi*r0*(1+zeta)*f**(1+zeta-eta)/(vc0*Q0*f0**(zeta-eta))
@@ -99,7 +101,7 @@ def saltation_model(f, D, H, W, theta, r0, qb=None, D50=None, tau_c50=None, Q0=N
     cD = (4 / 3) * (R * g * D) / (w_s**2)
     
     # Estimate terminal settling velocity ws
-    wst = np.sqrt(4 * R * g * D / 3 / cD)  # interconnected with cD formula (inverse)
+    wst = np.sqrt(4 * R * g * D / 3 / cD)
     Hb_c = 3 * cD * rho_f * Hb / (2 * rho_s * D * np.cos(np.radians(theta)))
     wi = wst * np.cos(np.radians(theta)) * np.sqrt(1 - np.exp(-Hb_c))  # from Lamb et al., 2008
     C1 = 2/3  # rise and fall time of a particle
@@ -118,9 +120,9 @@ def saltation_model(f, D, H, W, theta, r0, qb=None, D50=None, tau_c50=None, Q0=N
     return PSD
 
 if __name__ == "__main__":
-    f = np.linspace(0.001, 20, 100)  # Frequency range from 0.1 to 100 Hz
-    D = 0.3    # Grain diameter:  1cm
-    H = 4.0       # Flow depth: 2 m
+    f = np.linspace(0.001, 20, 100)
+    D = 0.3  
+    H = 4.0     
     W = 50
     theta = np.tan(1.4*np.pi/180)
     r0 = 600
