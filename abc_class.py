@@ -6,7 +6,7 @@ class SeismicBasedBedloadTransportModel(ABC):
     """
 
     @abstractmethod
-    def forward_psd(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance):
+    def forward_psd(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, **kwargs):
         """
         Calculate the power spectral density (PSD) for sediment transport.
 
@@ -20,5 +20,23 @@ class SeismicBasedBedloadTransportModel(ABC):
         
         Returns:
             Power-spectral density (PSD) of seismic velocity signal.
+        """
+        pass
+
+    @abstractmethod
+    def inverse_bedload(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, **kwargs):
+        """
+        Inverse calculation for bedload transport based on seismic data.
+
+        Args:
+            frequency : Frequency window (Hz).
+            grain_size : Grain size diameter (m).
+            flow_depth : Water depth (m).
+            channel_width : Channel width (m).
+            slope_angle : Channel slope (-).
+            source_receiver_distance : Distance from the river thalweg to a seismic sensor (m).
+
+        Returns:
+            Inverse back bedload flux from seismic PSD.
         """
         pass
