@@ -6,7 +6,7 @@ class SeismicBasedBedloadTransportModel(ABC):
     """
 
     @abstractmethod
-    def forward_psd(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, **kwargs):
+    def forward_psd(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, qb, **kwargs):
         """
         Calculate the power spectral density (PSD) for sediment transport.
 
@@ -24,7 +24,7 @@ class SeismicBasedBedloadTransportModel(ABC):
         pass
 
     @abstractmethod
-    def inverse_bedload(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, **kwargs):
+    def inverse_bedload(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, qb, **kwargs):
         """
         Inverse calculation for bedload transport based on seismic data.
 

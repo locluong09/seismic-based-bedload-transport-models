@@ -5,7 +5,7 @@ from scipy.special import gamma
 from dataclasses import dataclass
 from typing import Optional, Union, Dict, Any
 
-from abc_class import SeismicBasedBedloadTransportModel
+from models.abc_class import SeismicBasedBedloadTransportModel
 
 @dataclass
 class SedimentParams:
@@ -93,8 +93,8 @@ class SaltationModel(SeismicBasedBedloadTransportModel):
         u = np.sqrt(self.sediment_params.g * H * theta)
         tau = u**2 / R / self.sediment_params.g / D
         
-        if tau / tau_c <= 1:
-            raise ValueError("tau/tau_c <= 1: No bedload transport")
+        # if tau / tau_c <= 1:
+        #     raise ValueError("tau/tau_c <= 1: No bedload transport")
         
         ks = 3 * D  # roughness scale
         U = 8.1 * u * (H / ks)**1.6
@@ -138,12 +138,13 @@ class SaltationModel(SeismicBasedBedloadTransportModel):
         # Calculate critical shear stress for D50
         if tau_c50 is None:
             tau_c50 = self.estimate_critical_shear(theta)
+            print(tau_c50)
         
         tau_c = tau_c50 * (D / D50)**(-0.9)
-
-        if tau_c < 0.03:
+        print(tau_c)
+        if tau_c.any() < 0.03:
             tau_c = 0.03
-        if tau_c > 0.06:
+        if tau_c.any() > 0.06:
             tau_c = 0.06
         
         # Calculate bedload parameters
@@ -175,7 +176,7 @@ class SaltationModel(SeismicBasedBedloadTransportModel):
             
         # Impact rate
         rate = self.sediment_params.C1 * W * qb * ws / (Vp * Ub * Hb)
-            
+        print(rate)
         # Final PSD calculation
         PSD = (rate * (np.pi**2 * m**2 * wi**2) / self.sediment_params.rho_s**2 * 
                   f**3 / vc**3 / vu**2 * chi)
@@ -205,29 +206,3 @@ class MultimodeModel(SeismicBasedBedloadTransportModel):
     def inverse_bedload(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, qb, **kwargs):
 
         pass
-
-
-# Example usage and testing
-if __name__ == "__main__":
-    # Test with different approaches
-    f = np.linspace(0.001, 20, 100)
-    D = 0.3  
-    H = 4.0     
-    W = 50
-    theta = np.tan(1.4*np.pi/180)
-    r0 = 600
-    qb = 1e-3
-    # Method 1: Using the class directly
-    model = SaltationModel()
-    psd1 = model.forward_psd(f, D, H, W, theta, r0, qb)
-    print(psd1)
-    psd_dB = 10*np.log10(psd1)
-
-    plt.figure(figsize=(10, 6))
-    plt.plot(f, psd_dB)
-    plt.xlabel('Frequency (Hz)')
-    plt.ylabel('Power Spectral Density')
-    plt.title('Saltation Mode Model - Sediment Transport PSD')
-    plt.grid(True, alpha=0.3)
-    plt.ylim(-170, -110)
-    plt.show()

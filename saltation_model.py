@@ -102,12 +102,12 @@ def saltation_model(f, D, H, W, theta, r0, qb=None, D50=None, tau_c50=None, Q0=N
     
     # Estimate terminal settling velocity ws
     wst = np.sqrt(4 * R * g * D / 3 / cD)
-    Hb_c = 3 * cD * rho_f * Hb / (2 * rho_s * D * np.cos(np.radians(theta)))
-    wi = wst * np.cos(np.radians(theta)) * np.sqrt(1 - np.exp(-Hb_c))  # from Lamb et al., 2008
+    Hb_c = 3 * cD * rho_f * Hb / (2 * rho_s * D * np.cos(np.arctan(theta)))
+    wi = wst * np.cos(np.arctan(theta)) * np.sqrt(1 - np.exp(-Hb_c))  # from Lamb et al., 2008
     C1 = 2/3  # rise and fall time of a particle
     
     # Average settling velocity across the bedload layer (Tsai et al., 2012)
-    ws = (Hb_c * wst * np.cos(np.radians(theta)) / 
+    ws = (Hb_c * wst * np.cos(np.arctan(theta)) / 
           (2 * np.log(np.exp(Hb_c/2) + np.sqrt(np.exp(Hb_c) - 1))))
     
     hop_time = Hb / (C1 * ws)
@@ -124,9 +124,10 @@ if __name__ == "__main__":
     D = 0.3  
     H = 4.0     
     W = 50
-    theta = np.tan(1.4*np.pi/180)
+    theta = np.tan(1.4*np.pi/180)  # Convert degrees to radians
     r0 = 600
     psd = saltation_model(f, D, H, W, theta, r0)
+    print(psd)
     psd_dB = 10*np.log10(psd)
 
     plt.figure(figsize=(10, 6))
