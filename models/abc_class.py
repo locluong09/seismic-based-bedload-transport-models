@@ -24,11 +24,12 @@ class SeismicBasedBedloadTransportModel(ABC):
         pass
 
     @abstractmethod
-    def inverse_bedload(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, qb, **kwargs):
+    def inverse_bedload(self, PSD_observe, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, qb, **kwargs):
         """
-        Inverse calculation for bedload transport based on seismic data.
+        Inverse calculation for bedload transport based on observed seismic PSD.
 
         Args:
+            PSD_observe: observed PSD
             frequency : Frequency window (Hz).
             grain_size : Grain size diameter (m).
             flow_depth : Water depth (m).

@@ -2,5 +2,10 @@
 .cache
 
 __pycache__/
+
+# Python bytecode
 *.py[cod]
 *$py.class
+
+# pytest cache
+.pytest_cache/

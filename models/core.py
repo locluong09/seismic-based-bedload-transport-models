@@ -1,9 +1,8 @@
 import numpy as np
-import matplotlib.pyplot as plt
 
 from scipy.special import gamma
 from dataclasses import dataclass
-from typing import Optional, Union, Dict, Any
+from typing import Optional, Union, Any
 
 from models.abc_class import SeismicBasedBedloadTransportModel
 
@@ -21,24 +20,34 @@ class SedimentParams:
 
 @dataclass
 class SeismicParams:
-    """ Seismic parameters for estimating group and phase velocities, as well as
-    seismic wave attenuation (From Tsai et al., 2012)"""
-    v0: float = 2206    # Reference velocity (m/s) at z0 = 1000m
-    z0: float = 1000    # Reference depth (m)
-    f0: float = 1       # Reference frequency (Hz)
+    v0: float = 2206
+    z0: float = 1000
+    f0: float = 1
     a: float = 0.272
     Q0: float = 20
     eta: float = 0
+    _zeta: Optional[float] = None 
+    _vc0: Optional[float] = None 
 
     @property
     def zeta(self) -> float:
+        if self._zeta is not None:
+            return self._zeta
         return self.a / (1 - self.a)
-    
+
+    @zeta.setter
+    def zeta(self, value: float):
+        self._zeta = value
+
     @property
     def vc0(self) -> float:
+        if self._vc0 is not None:
+            return self._vc0
         return (self.v0 * gamma(1 + self.a) / (2 * np.pi * self.z0 * self.f0)**self.a)**(1 / (1 - self.a))
 
-
+    @vc0.setter
+    def vc0(self, value: float):
+        self._vc0 = value
 
 class SaltationModel(SeismicBasedBedloadTransportModel):
     """
@@ -63,7 +72,7 @@ class SaltationModel(SeismicBasedBedloadTransportModel):
         else:
             raise ValueError(f"Unknown method: {method}")
         
-    def estimate_drag_coeff(self, D: float) -> float:
+    def estimate_drag_coeff(self, D: Union[float, np.ndarray]) -> float:
         R = (self.sediment_params.rho_s - self.sediment_params.rho_f) / self.sediment_params.rho_f
         
         D_star = (R * self.sediment_params.g * D**3) / self.sediment_params.nu**2
@@ -86,23 +95,32 @@ class SaltationModel(SeismicBasedBedloadTransportModel):
         
         return cD
     
-    def calculate_bedload_parameters(self, D: float, H: float, theta: float, 
-                                   tau_c: float) -> tuple[float, float, float]:
+    def calculate_bedload_parameters(self, D: [float, np.ndarray], H: float, 
+                                     theta: float, tau_c: Union[float, np.ndarray]) -> tuple[float, float, float]:
         """Calculate bedload transport parameters."""
+
         R = (self.sediment_params.rho_s - self.sediment_params.rho_f) / self.sediment_params.rho_f
         u = np.sqrt(self.sediment_params.g * H * theta)
         tau = u**2 / R / self.sediment_params.g / D
-        
-        # if tau / tau_c <= 1:
-        #     raise ValueError("tau/tau_c <= 1: No bedload transport")
-        
-        ks = 3 * D  # roughness scale
+
+        ks = 3 * D 
         U = 8.1 * u * (H / ks)**1.6
         
-        Ub = 1.56 * np.sqrt(R * self.sediment_params.g * D) * (tau / tau_c - 1)**0.56
-        Hb = 1.44 * D * (tau / tau_c - 1)**0.50
+        transport_stage = tau / tau_c 
+
         
-        return tau, Ub, Hb
+        Vp = np.pi * D**3 / 6
+        Ub = 1.56 * np.sqrt(R * self.sediment_params.g * D) *  (transport_stage -1)**0.56
+        Hb = 1.44 * D * (transport_stage - 1)**0.50
+
+        if isinstance(tau_c, np.ndarray):
+            Ub = np.clip(Ub, 0.0, U)
+            Hb = np.clip(Hb, 0.0, H)
+        else:
+            Ub = min(max(Ub, 0.0), U)
+            Hb = min(max(Hb, 0.0), H)
+
+        return Vp, Ub, Hb, transport_stage
     
     def calculate_seismic_properties(self, f: np.ndarray, r0: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Calculate seismic wave properties and attenuation."""
@@ -118,46 +136,50 @@ class SaltationModel(SeismicBasedBedloadTransportModel):
                (1 - np.exp(-beta)) * np.exp(-beta) * np.sqrt(2 * np.pi / beta))
         
         return vc, vu, chi
-
-    def forward_psd(self, f: np.ndarray, 
+    
+    def _psd(self, f: np.ndarray, 
                     D: Union[float, np.ndarray], 
-                    H: Union[float, np.ndarray], 
+                    H: float, 
                     W: float, 
                     theta: float, 
                     r0: float,
                     qb: float,
+                    tau_c: Union[float, np.ndarray] = None,
+                    clip_tau_c: bool = False,
                     D50: Union[float, np.ndarray] = None,
                     tau_c50: float = None) -> np.ndarray:
         """
-        Calculate the power spectral density (PSD) for sediment transport in saltation.
+        Calculate the power spectral density (PSD) for sediment transport in saltation (Tasi et al., 2012).
         """
-        f = np.asarray(f)
+        f = np.asarray(f)       
+
         if D50 is None:
             D50 = D
-        
-        # Calculate critical shear stress for D50
+            
         if tau_c50 is None:
-            tau_c50 = self.estimate_critical_shear(theta)
-            print(tau_c50)
-        
-        tau_c = tau_c50 * (D / D50)**(-0.9)
-        print(tau_c)
-        if tau_c.any() < 0.03:
-            tau_c = 0.03
-        if tau_c.any() > 0.06:
-            tau_c = 0.06
+            tau_c50 = self.estimate_critical_shear(theta)   
+
+        if tau_c is None:     
+            tau_c = tau_c50 * (D / D50)**(-0.9)
+        else:
+            tau_c = tau_c
+
+        if clip_tau_c:
+            if isinstance(tau_c, np.ndarray):
+                tau_c = np.clip(tau_c, 0.03, 0.06)
+            else:
+                tau_c = min(max(tau_c, 0.03), 0.06)
         
         # Calculate bedload parameters
-        _, Ub, Hb = self.calculate_bedload_parameters(D, H, theta, tau_c)
-            
+        Vp, Ub, Hb, transport_stage = self.calculate_bedload_parameters(D, H, theta, tau_c)
+
         # Calculate drag coefficient
         cD = self.estimate_drag_coeff(D)
             
         # Calculate seismic properties
         vc, vu, chi = self.calculate_seismic_properties(f, r0)
             
-        # Particle properties
-        Vp = np.pi * D**3 / 6
+        # particle mass
         m = self.sediment_params.rho_s * Vp
             
         # Terminal settling velocity and impact velocity
@@ -166,32 +188,90 @@ class SaltationModel(SeismicBasedBedloadTransportModel):
             
         Hb_c = (3 * cD * self.sediment_params.rho_f * Hb / 
                    (2 * self.sediment_params.rho_s * D * np.cos(np.arctan(theta))))
-            
+
         wi = (wst * np.cos(np.arctan(theta)) * 
                  np.sqrt(1 - np.exp(-Hb_c)))
             
-        # Average settling velocity
         ws = (Hb_c * wst * np.cos(np.arctan(theta)) / 
                  (2 * np.log(np.exp(Hb_c/2) + np.sqrt(np.exp(Hb_c) - 1))))
             
-        # Impact rate
         rate = self.sediment_params.C1 * W * qb * ws / (Vp * Ub * Hb)
-        print(rate)
-        # Final PSD calculation
+
         PSD = (rate * (np.pi**2 * m**2 * wi**2) / self.sediment_params.rho_s**2 * 
                   f**3 / vc**3 / vu**2 * chi)
-            
+        
+        PSD_ = np.where(transport_stage >= 1, PSD, 0)
+
         return PSD
 
-    def inverse_bedload(self, PSD, f, D, H, W, theta, r0, qb,**kwargs):
+    def forward_psd(self, f: np.ndarray, 
+                    D: Union[float, np.ndarray], 
+                    H: float, 
+                    W: float, 
+                    theta: float, 
+                    r0: float,
+                    qb: float,
+                    tau_c: Union[float, np.ndarray] = None,
+                    clip_tau_c: bool = False,
+                    D50: Union[float, np.ndarray] = None,
+                    tau_c50: float = None,
+                    pdf: Optional[np.ndarray] = None) -> np.ndarray:
+
+        f = np.asarray(f)        
+        D = np.atleast_1d(D)
+        PSD = np.zeros_like(f, dtype=float)
+
+        if D.size == 1:
+            return self._psd(f, D[0], H, W, theta, r0, qb, tau_c, clip_tau_c, D50=D50, tau_c50=tau_c50)
+        
+        if pdf is None:
+            pdf = np.ones_like(D) / len(D)
+        
+        for i, fi in enumerate(f):
+            psd_D = self._psd(fi, D, H, W, theta, r0, qb, tau_c, clip_tau_c, D50=D50, tau_c50=tau_c50)
+            PSD[i]= np.trapz(y = pdf * psd_D, x = D)
+
+        return PSD
+
+    def inverse_bedload(self, PSD_obs: Union[float, np.ndarray],
+                        f: np.ndarray,
+                        D: Union[float, np.ndarray],
+                        H: Union[float, np.ndarray],
+                        W: float,
+                        theta: float,
+                        r0: float,
+                        qb: float, **kwargs) -> Union[float, np.ndarray]:
         """
         Inverse calculation for bedload transport based on seismic data in saltation.
         """
-        qb = 1
-        PSD_star = self.forward_psd(f, D, H, W, theta, r0, qb, **kwargs)
-        PSD_median = np.median(PSD_star)
+        # Extract optional parameters
+        tau_c = kwargs.get("tau_c", None)
+        clip_tau_c = kwargs.get("clip_tau_c", None)
+        tau_c50 = kwargs.get("tau_c50", None)
+        D50 = kwargs.get("D50", None)
+        pdf = kwargs.get("pdf", None)
 
+        assert len(PSD_obs) == len(H), "PSD_obs and H must have the same length"
+
+        PSD_obs = np.asarray(PSD_obs)
+        PSD_obs = 10**(PSD_obs/10)
+
+        if qb != 1.0:
+            qb = 1.0
+
+        if PSD_obs.size == 1:
+            PSD_star = self.forward_psd(f, D, H, W, theta, r0, qb, tau_c, clip_tau_c, D50 = 50, tau_c50=tau_c50, pdf=pdf)
+            PSD_median = np.median(PSD_star)
+            return PSD_obs/PSD_median
         
+        bedload_flux = np.zeros_like(H)
+        for i, h in enumerate(H):
+            PSD_star = self.forward_psd(f, D, h, W, theta, r0, qb, tau_c, clip_tau_c, D50 = D50, tau_c50=tau_c50, pdf=pdf)
+            PSD_median = np.median(PSD_star)
+            bedload_flux[i] = PSD_obs[i] / PSD_median
+            # bedload_flux[i] = np.where(PSD_median < threshold, PSD_obs[i] / PSD_median, 0)
+
+        return bedload_flux
         
 
 class MultimodeModel(SeismicBasedBedloadTransportModel):

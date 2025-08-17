@@ -112,7 +112,7 @@ def saltation_model(f, D, H, W, theta, r0, qb=None, D50=None, tau_c50=None, Q0=N
     
     hop_time = Hb / (C1 * ws)
     
-    rate = C1 * W * qb * ws / (Vp * Ub * Hb)  # bedload model
+    rate = C1 * W * qb * ws / (Vp * Ub * Hb) 
     
     PSD = (rate * (np.pi**2 * m**2 * wi**2) / rho_s**2 * 
            f**3 / vc**3 / vu**2 * Chi)
