@@ -4,16 +4,16 @@ from utils import log_raised_cosine_pdf
 import matplotlib.pyplot as plt
 from models import SaltationModel, SeismicParams
 
-def test_inversion():
+def test_saltation_inversion():
     seismic_params = SeismicParams()
     seismic_params.vc0 = 250
     seismic_params.zeta = 0.089
 
-    PSD_observe = np.loadtxt("data/PSD.txt")
+    PSD_observe = np.loadtxt("data/pinos/PSD.txt")
     idx = np.arange(49, (49+317))
     PSD_obs = PSD_observe[idx]
     
-    H = np.loadtxt("data/flowdepth.txt")
+    H = np.loadtxt("data/pinos/flowdepth.txt")
     H = H/100
 
     f = np.linspace(30, 80, 10)
@@ -58,6 +58,6 @@ def test_inversion():
 
 
 if __name__ == "__main__":
-    test_inversion()
+    test_saltation_inversion()
 
     

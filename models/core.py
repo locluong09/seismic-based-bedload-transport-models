@@ -2,7 +2,7 @@ import numpy as np
 
 from scipy.special import gamma
 from dataclasses import dataclass
-from typing import Optional, Union, Any
+from typing import Optional, Union
 
 from models.abc_class import SeismicBasedBedloadTransportModel
 
@@ -28,6 +28,12 @@ class SeismicParams:
     eta: float = 0
     _zeta: Optional[float] = None 
     _vc0: Optional[float] = None 
+    phi: float = 0.0
+    eb: float = 0.5
+    fx: float = 0.146
+    fy: float = 0.146
+    fz: float = 0.539
+    Nzz: float = 0.352
 
     @property
     def zeta(self) -> float:
@@ -65,10 +71,12 @@ class SaltationModel(SeismicBasedBedloadTransportModel):
         # slope of the basin
         if method == 'gimbert':
             dummy = 0.407 * np.log(142 * theta)
-            return np.exp(2.59e-2 * (dummy**4) + 8.94e-2 * (dummy**3) + 
+            tau_c50 =  np.exp(2.59e-2 * (dummy**4) + 8.94e-2 * (dummy**3) + 
                          0.142 * (dummy**2) + 0.41 * dummy - 3.14)
+            return tau_c50
         elif method == 'lamb':
-            return 0.15 * (theta)**0.25
+            tau_c50 =  0.15 * (theta)**0.25
+            return tau_c50
         else:
             raise ValueError(f"Unknown method: {method}")
         
@@ -278,11 +286,223 @@ class MultimodeModel(SeismicBasedBedloadTransportModel):
     """
     Multimode model (from Luong et al., 2024)
     """
-
-    def forward_psd(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, qb, **kwargs):
+    def __init__(self, sediment_params: Optional[SedimentParams] = None,
+                 seismic_params: Optional[SeismicParams] = None):
+        self.sediment_params = sediment_params if sediment_params else SedimentParams()
+        self.seismic_params = seismic_params if seismic_params else SeismicParams()
     
-        pass
+    def calculate_seismic_properties(self, f: np.ndarray, r0: float) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        """Calculate seismic wave properties and attenuation."""
+        vc = self.seismic_params.vc0 * (f / self.seismic_params.f0)**(-self.seismic_params.zeta)
+        vu = vc / (1 + self.seismic_params.zeta)
+        
+        beta = (2 * np.pi * r0 * (1 + self.seismic_params.zeta) * 
+                f**(1 + self.seismic_params.zeta - self.seismic_params.eta) / 
+                (self.seismic_params.vc0 * self.seismic_params.Q0 * 
+                 self.seismic_params.f0**(self.seismic_params.zeta - self.seismic_params.eta)))
+        
+        chi = (2 * np.log(1 + 1/beta) * np.exp(-2 * beta) + 
+               (1 - np.exp(-beta)) * np.exp(-beta) * np.sqrt(2 * np.pi / beta))
+        
+        return vc, vu, chi
+    
+    def flow_velocity(self, Rh: float, theta: float, n: float, method: str = 'manning'):
+        # Right now, just Manning equation
+        U = 1/n * Rh**(2/3) * theta**(1/2)
+        return U
+    
+    def bedload_velocity(self, H: float, theta: float, D: Union[float, np.ndarray], 
+                         ks: float, tau_c: Union[float, np.ndarray], method: str='julien') -> Union[float, np.ndarray]:
+        R = (self.sediment_params.rho_s - self.sediment_params.rho_f) / self.sediment_params.rho_f
+        u = np.sqrt(self.sediment_params.g * H * theta)
 
-    def inverse_bedload(self, frequency, grain_size, flow_depth, channel_width, slope_angle, source_receiver_distance, qb, **kwargs):
+        tau = u**2 / R / self.sediment_params.g / D
+        ks = 3 * D
 
-        pass
+        U = 8.1 * u * (H / ks)**1.6
+        U_manning = self.flow_velocity(Rh = H, theta = theta, n = ks)
+
+        if method == 'julien':
+            v = 30.5 *tau* np.sqrt(R * self.sediment_params.g * D) * (D/ks)**0.583
+            v = min(max(v, 0.0), U)
+        elif method == 'sklar':
+            v = 1.56 * np.sqrt(R * self.sediment_params.g * D) * (tau/tau_c - 1)**0.56
+            v = min(max(v, 0.0), U)
+        elif method == 'gimbert':
+            v = 1.19 * np.sqrt(R * self.sediment_params.g * D) * (tau/tau_c - 1)**0.3
+            v = min(max(v, 0.0), U)
+        else:
+            raise ValueError(f"Unknown method: {method}")
+
+        if v > U_manning:
+            v = U_manning
+        return v
+
+    def estimate_critical_shear(self, theta, method: str ='gimbert'):
+        # Estimate the critical shear stress using Gimbert et al. (2019) or Lamb et al. (2008) based on
+        # slope of the basin
+        if method == 'gimbert':
+            dummy = 0.407 * np.log(142 * theta)
+            tau_c50 =  np.exp(2.59e-2 * (dummy**4) + 8.94e-2 * (dummy**3) + 
+                         0.142 * (dummy**2) + 0.41 * dummy - 3.14)
+            return tau_c50
+        elif method == 'lamb':
+            tau_c50 =  0.15 * (theta)**0.25
+            return tau_c50
+        else:
+            raise ValueError(f"Unknown method: {method}")
+        
+    def _psd(self, f: np.ndarray, 
+                    D: Union[float, np.ndarray], 
+                    H: float, 
+                    W: float, 
+                    theta: float, 
+                    r0: float,
+                    qb: float,
+                    t: Union[float, np.ndarray],
+                    ks: Union[float, np.ndarray] = None,
+                    tau_c: Union[float, np.ndarray] = None,
+                    clip_tau_c: bool = False,
+                    D50: Union[float, np.ndarray] = None,
+                    tau_c50: float = None) -> np.ndarray:
+        """
+        Calculate the power spectral density (PSD) for sediment transport in saltation (Tasi et al., 2012).
+        """
+        f = np.asarray(f)       
+
+        if D50 is None:
+            D50 = D
+            
+        if tau_c50 is None:
+            tau_c50 = self.estimate_critical_shear(theta)   
+        
+        if tau_c is None:     
+            tau_c = tau_c50 * (D / D50)**(-0.9)
+        else:
+            tau_c = tau_c
+
+        if clip_tau_c:
+            if isinstance(tau_c, np.ndarray):
+                tau_c = np.clip(tau_c, 0.03, 0.06)
+            else:
+                tau_c = min(max(tau_c, 0.03), 0.06)
+
+        if ks is None:
+            ks = 3*D
+        
+        # print(D50, tau_c, tau_c50)
+        # Calculate seismic properties
+        vc, vu, chi = self.calculate_seismic_properties(f, r0)
+
+        Vp = np.pi * D**3 / 6
+        # particle mass
+        m = self.sediment_params.rho_s * Vp
+        Rh = (W * H) / (W + 2 * H)
+
+        if H < 0.4:
+            v = self.bedload_velocity(Rh, theta, D, ks, tau_c, method='julien')
+        else:
+            v = self.bedload_velocity(Rh, theta, D, ks, tau_c, method='sklar')
+            # if ~np.isfinite(v):
+            #     v = 0.6*1.6
+        # v = self.bedload_velocity(H, theta, D, ks, tau_c, method='sklar')
+        
+        s = v * t 
+        rate = W * qb / Vp / s
+
+        Ix = self.seismic_params.fx * (1 + self.seismic_params.eb) * v
+        Iy = self.seismic_params.fy * (1 + self.seismic_params.eb) * v
+        Iz = self.seismic_params.fz * (1 + self.seismic_params.eb) * v
+        
+        if self.seismic_params.phi > 0:
+            Nxz = 0.8*np.cos(phi)
+            Nyz = 0.8*np.sind(phi)
+        else:
+            Nxz = Nyz = 0
+
+        I = (np.abs(Ix * Nxz) + np.abs(Iy * Nyz) + np.abs(Iz * self.seismic_params.Nzz))**2
+
+        PSD = rate * (m**2 * np.pi**2 * I) / self.sediment_params.rho_s**2 / 4 * f**3 / vc**3 / vu**2 * chi
+
+        return PSD
+
+    def forward_psd(self,
+                    f: np.ndarray, 
+                    D: Union[float, np.ndarray], 
+                    H: float, 
+                    W: float, 
+                    theta: float, 
+                    r0: float,
+                    qb: float,
+                    t: Union[float, np.ndarray],
+                    ks: Union[float, np.ndarray] = None,
+                    tau_c: Union[float, np.ndarray] = None,
+                    clip_tau_c: bool = False,
+                    D50: Union[float, np.ndarray] = None,
+                    tau_c50: float = None,
+                    pdf_D: Optional[np.ndarray] = None,
+                    pdf_t: Optional[np.ndarray] = None) -> np.ndarray:
+    
+        f = np.asarray(f)        
+        D = np.atleast_1d(D)
+        t = np.atleast_1d(t)
+
+        PSD = np.zeros_like(f, dtype=float)
+        psd_D = np.zeros_like(D, dtype=float)
+
+        if D.size == 1 and t.size == 1:
+            return self._psd(f, D, H, W, theta, r0, qb, t, ks, tau_c, clip_tau_c, D50, tau_c50)
+        
+        if pdf_D is None:
+            pdf_D = np.zeros_like(D) / len(D)
+        
+        if pdf_t is None:
+            pdf_t = np.zeros_like(t) / len(t)
+        
+        for i, fi in enumerate(f):
+            for j, d in enumerate(D):
+                psd_t = self._psd(fi, d, H, W, theta, r0, qb, t, ks, tau_c, clip_tau_c, D50, tau_c50)
+                psd_D[j] = np.trapz(y = psd_t * pdf_t, x = t)
+            PSD[i]= np.trapz(y = pdf_D * psd_D, x = D)
+
+        return PSD
+
+    def inverse_bedload(self,
+                    PSD_obs: np.ndarray,
+                    f: np.ndarray, 
+                    D: Union[float, np.ndarray], 
+                    H: float, 
+                    W: float, 
+                    theta: float, 
+                    r0: float,
+                    qb: float,
+                    t: Union[float, np.ndarray],
+                    ks: Union[float, np.ndarray] = None,
+                    tau_c: Union[float, np.ndarray] = None,
+                    clip_tau_c: bool = False,
+                    D50: Union[float, np.ndarray] = None,
+                    tau_c50: float = None,
+                    pdf_D: Optional[np.ndarray] = None,
+                    pdf_t: Optional[np.ndarray] = None) -> np.ndarray:
+        
+        assert len(PSD_obs) == len(H), "PSD_obs and H must have the same length"
+
+        PSD_obs = np.asarray(PSD_obs)
+        PSD_obs = 10**(PSD_obs/10)
+
+        if qb != 1.0:
+            qb = 1.0
+
+        if PSD_obs.size == 1:
+            PSD_star = self.forward_psd(f, D, H, W, theta, r0, qb, tau_c, clip_tau_c, D50 = D50, tau_c50=tau_c50, pdf=pdf)
+            PSD_median = np.median(PSD_star)
+            return PSD_obs/PSD_median
+        
+        bedload_flux = np.zeros_like(H)
+
+        for i, h in enumerate(H):
+            PSD_star = self.forward_psd(f, D, h, W, theta, r0, qb, t, ks, D50 = D50, pdf_D=pdf_D, pdf_t=pdf_t)
+            PSD_median = np.mean(PSD_star)
+            bedload_flux[i] = PSD_obs[i] / PSD_median
+
+        return bedload_flux

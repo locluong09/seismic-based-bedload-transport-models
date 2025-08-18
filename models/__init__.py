@@ -1,3 +1,3 @@
-from .core import SaltationModel, SedimentParams, SeismicParams
+from .core import SaltationModel, MultimodeModel, SedimentParams, SeismicParams
 
-__all__ = ["SaltationModel", "SedimentParams", "SeismicParams"]
+__all__ = ["SaltationModel", "MultimodeModel", "SedimentParams", "SeismicParams"]
