@@ -14,13 +14,14 @@ Implementation of seismic-based bedload transport models, including the **saltat
 You can install the package locally after building:
 
 ```bash
-pip install ./dist/seismic_bedload-0.1.0-py3-none-any.whl
+pip install seismic_bedload
 ```
 
 ## Usage
 
 ```python
-from seismic_bedload import SaltationModel
+
+from seismic_bedload import SaltationModel, MultimodeModel
 
 f = np.linspace(0.001, 20, 100)
 D = 0.3  
