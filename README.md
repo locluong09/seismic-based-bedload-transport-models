@@ -11,7 +11,7 @@ Implementation of seismic-based bedload transport models, including the **saltat
 
 ## Installation
 
-You can install the package using either pip or by cloning this repo and install locally:
+You can install the package using either pip or by cloning this repo and install it locally:
 
 ```bash
 pip install seismic_bedload
@@ -28,10 +28,6 @@ from seismic_bedload import log_raised_cosine_pdf
 
 f = np.linspace(0.001, 20, 100)
 D = 0.3  
-sigma = 0.52
-mu = 0.15
-s = sigma/np.sqrt(1/3-2/np.pi**2)
-pD = log_raised_cosine_pdf(D, mu, s)/D
 D50 = 0.4
 H = 4.0     
 W = 50
@@ -43,13 +39,33 @@ model = SaltationModel()
 # Forward modeling of PSD
 psd = model.forward_psd(f, D, H, W, theta, r0, qb, D50 = D50, pdf = pD)
 
+# Reproduce Tsai results
 plt.plot(f, psd)
 plt.show()
 
 # Inverting  bedload flux
 PSD_obs = np.loadtxt("data/pinos/PSD.txt")
 H = np.loadtxt("data/pinos/flowdepth.txt")
-bedload_flux = model.inverse_bedload(PSD_obs, f, D, H, W, theta, r0, qb, D50=D50, tau_c50=tau_c50, pdf = pD)
+# Need to make sure PSD_obs and H have the same length
+idx = np.arange(49, (49+317))
+PSD_obs = PSD_obs[idx]
+H = H/100 # to meter
+
+# Data for Pinos
+f = np.linspace(30, 80, 10)
+D = np.asarray(np.linspace(0.0001,0.07,100))
+sigma = 0.85
+mu = 0.009
+s = sigma/np.sqrt(1/3-2/np.pi**2)
+pD = log_raised_cosine_pdf(D, mu, s)/D
+
+tau_c50 = 0.045
+D50 = 0.005
+W = 10
+theta = np.tan(0.7*np.pi/180)
+r0 = 17
+qb = 1 # Set qb = 1 for inverse mode
+bedload_flux = model.inverse_bedload(PSD_obs, f, D, H, W, theta, r0, qb = 1, D50=D50, tau_c50=tau_c50, pdf = pD)
 ```
 
 ## TODO
