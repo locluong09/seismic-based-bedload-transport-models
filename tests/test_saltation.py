@@ -1,8 +1,8 @@
 # Example usage and testing
 import numpy as np
-from utils import log_raised_cosine_pdf
+from seismic_bedload.utils import log_raised_cosine_pdf
 import matplotlib.pyplot as plt
-from models import SaltationModel, SedimentParams, SeismicParams
+from seismic_bedload import SaltationModel
 
 def test_saltation_model():
     f = np.linspace(0.001, 20, 100)

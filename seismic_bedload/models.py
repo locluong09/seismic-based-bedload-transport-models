@@ -4,7 +4,7 @@ from scipy.special import gamma
 from dataclasses import dataclass
 from typing import Optional, Union
 
-from models.abc_class import SeismicBasedBedloadTransportModel
+from seismic_bedload.abc_class import SeismicBasedBedloadTransportModel
 
 @dataclass
 class SedimentParams:
