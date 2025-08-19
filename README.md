@@ -28,28 +28,26 @@ from seismic_bedload import log_raised_cosine_pdf
 
 f = np.linspace(0.001, 20, 100)
 D = 0.3  
-D50 = 0.4
 H = 4.0     
 W = 50
 theta = np.tan(1.4*np.pi/180)
 r0 = 600
 qb = 1e-3
+
 model = SaltationModel()
-
 # Forward modeling of PSD
-psd = model.forward_psd(f, D, H, W, theta, r0, qb, D50 = D50, pdf = pD)
-
+psd = model.forward_psd(f, D, H, W, theta, r0, qb)
 # Reproduce Tsai results
 plt.plot(f, psd)
 plt.show()
 
-# Inverting  bedload flux
+# Inverting  bedload flux using Pinos dataset
 PSD_obs = np.loadtxt("data/pinos/PSD.txt")
 H = np.loadtxt("data/pinos/flowdepth.txt")
 # Need to make sure PSD_obs and H have the same length
 idx = np.arange(49, (49+317))
 PSD_obs = PSD_obs[idx]
-H = H/100 # to meter
+H = H/100 # depth to meter
 
 # Data for Pinos
 f = np.linspace(30, 80, 10)
