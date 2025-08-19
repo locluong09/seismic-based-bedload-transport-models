@@ -11,7 +11,7 @@ Implementation of seismic-based bedload transport models, including the **saltat
 
 ## Installation
 
-You can install the package locally after building:
+You can install the package using either pip or by cloning this repo and install locally:
 
 ```bash
 pip install seismic_bedload
@@ -20,8 +20,11 @@ pip install seismic_bedload
 ## Usage
 
 ```python
+import numpy as np
+import matplotlib.pyplot as plt
 
 from seismic_bedload import SaltationModel, MultimodeModel
+from seismic_bedload import log_raised_cosine_pdf
 
 f = np.linspace(0.001, 20, 100)
 D = 0.3  
@@ -39,6 +42,9 @@ model = SaltationModel()
 
 # Forward modeling of PSD
 psd = model.forward_psd(f, D, H, W, theta, r0, qb, D50 = D50, pdf = pD)
+
+plt.plot(f, psd)
+plt.show()
 
 # Inverting  bedload flux
 PSD_obs = np.loadtxt("data/pinos/PSD.txt")
