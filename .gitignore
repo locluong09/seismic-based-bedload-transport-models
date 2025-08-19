@@ -9,3 +9,9 @@ __pycache__/
 
 # pytest cache
 .pytest_cache/
+
+
+# Build artifacts
+dist/
+*.egg-info/
+build/
