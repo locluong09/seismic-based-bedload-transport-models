@@ -26,13 +26,13 @@ import matplotlib.pyplot as plt
 from seismic_bedload import SaltationModel, MultimodeModel
 from seismic_bedload import log_raised_cosine_pdf
 
-f = np.linspace(0.001, 20, 100)
-D = 0.3  
-H = 4.0     
-W = 50
+f = np.linspace(0.001, 20, 100) #frequency window
+D = 0.3  # grain size (m)
+H = 4.0   # flow depth (m)
+W = 50 # river width (m)
 theta = np.tan(1.4*np.pi/180)
-r0 = 600
-qb = 1e-3
+r0 = 600 # source-receiver distance (m)
+qb = 1e-3 # volumetric bedload flux per unit width (m2/s)
 
 model = SaltationModel()
 # Forward modeling of PSD
@@ -50,20 +50,21 @@ PSD_obs = PSD_obs[idx]
 H = H/100 # depth to meter
 
 # Data for Pinos
-f = np.linspace(30, 80, 10)
+f = np.linspace(30, 80, 10) # frequency (Hz)
 D = np.asarray(np.linspace(0.0001,0.07,100))
 sigma = 0.85
 mu = 0.009
 s = sigma/np.sqrt(1/3-2/np.pi**2)
 pD = log_raised_cosine_pdf(D, mu, s)/D
 
-tau_c50 = 0.045
-D50 = 0.005
-W = 10
-theta = np.tan(0.7*np.pi/180)
-r0 = 17
-qb = 1 # Set qb = 1 for inverse mode
-bedload_flux = model.inverse_bedload(PSD_obs, f, D, H, W, theta, r0, qb = 1, D50=D50, tau_c50=tau_c50, pdf = pD)
+tau_c50 = 0.045 # Critical shield for D50 (-)
+D50 = 0.005 # mean grain size D50 (m)
+W = 10 # river width (m)
+theta = np.tan(0.7*np.pi/180) # slope (-)
+r0 = 17 # source-receiver distance (m)
+qb = 1 # Set qb = 1 for inverse mode m2/s
+bedload_flux = model.inverse_bedload(PSD_obs, f, D, H, W, theta, r0, qb = 1, D50=D50, tau_c50=tau_c50, pdf = pD) # m2/s
+bedload_flux = bedload_flux * 2700 # to (kg/m/s)
 ```
 
 ## TODO
