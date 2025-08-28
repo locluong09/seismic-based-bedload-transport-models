@@ -41,3 +41,34 @@ class SeismicBasedBedloadTransportModel(ABC):
             Inverse back bedload flux from seismic PSD.
         """
         pass
+
+class Empirical(ABC):
+    """Abstract base class for empirical models.    
+    """
+    @abstractmethod
+    def fit(self, *args, **kwargs):
+        """
+        Fit the empirical model to the data.
+
+        Args:
+            *args: Positional arguments for the fitting process.
+            **kwargs: Keyword arguments for the fitting process.
+
+        Returns:
+            Fitted model parameters.
+        """
+        pass
+
+    @abstractmethod
+    def predict(self, *args, **kwargs):
+        """
+        Make predictions using the fitted empirical model.
+
+        Args:
+            *args: Positional arguments for the prediction process.
+            **kwargs: Keyword arguments for the prediction process.
+
+        Returns:
+            Predicted values.
+        """
+        pass
