@@ -18,4 +18,6 @@ class SeismicHydraulicModel(Empirical):
         return PSD_re
 
     def predict(self, PSD, shear):
-        pass
+        PSD_re = self.fit(PSD, shear)
+        bedload_flux = self.params['k'] * (10 ** (PSD/10 - PSD_re/10)) ** self.params['m'] * shear ** self.params['n']
+        return bedload_flux
