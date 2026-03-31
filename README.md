@@ -70,15 +70,17 @@ bedload_flux = bedload_flux * 2700 # to (kg/m/s)
 ## TODO
 
 - ~~Allows grain size distribution (pD) to be called from forward and inverse method~~
-- Implementing empirical models
-- Multi-mode model testing
-- Particle velocity update
+- ~~Implementing empirical models~~
+- ~~Multi-mode model testing, including the hop time distribution~~
+- Update equations for bedload velocity estimation
 
 ## References
 
 Tsai, V.C., Minchew, B., Lamb, M.P. and Ampuero, J.P., 2012. A physical model for seismic noise generation from sediment transport in rivers. Geophysical Research Letters, 39(2).
 
 Luong, L., Cadol, D., Bilek, S., McLaughlin, J.M., Laronne, J.B. and Turowski, J.M., 2024. Seismic modeling of bedload transport in a gravel‐bed alluvial channel. Journal of Geophysical Research: Earth Surface, 129(9), p.e2024JF007761.
+
+Luong, L., Cadol, D., Turowski, J.M., Bilek, S., McLaughlin, J.M., Stark, K. and Laronne, J.B., 2026. An empirical model combining seismic noise and shear stress to predict bedload flux in a gravel‐bed alluvial channel. Water Resources Research, 62(2), p.e2025WR040371.
 
 ## License
 

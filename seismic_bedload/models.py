@@ -237,7 +237,7 @@ class SaltationModel(SeismicBasedBedloadTransportModel):
         
         for i, fi in enumerate(f):
             psd_D = self._psd(fi, D, H, W, theta, r0, qb, tau_c, clip_tau_c, D50=D50, tau_c50=tau_c50)
-            PSD[i]= np.trapz(y = pdf * psd_D, x = D)
+            PSD[i]= np.trapezoid(y = pdf * psd_D, x = D)
 
         return PSD
 
@@ -462,8 +462,8 @@ class MultimodeModel(SeismicBasedBedloadTransportModel):
         for i, fi in enumerate(f):
             for j, d in enumerate(D):
                 psd_t = self._psd(fi, d, H, W, theta, r0, qb, t, ks, tau_c, clip_tau_c, D50, tau_c50)
-                psd_D[j] = np.trapz(y = psd_t * pdf_t, x = t)
-            PSD[i]= np.trapz(y = pdf_D * psd_D, x = D)
+                psd_D[j] = np.trapezoid(y = psd_t * pdf_t, x = t)
+            PSD[i]= np.trapezoid(y = pdf_D * psd_D, x = D)
 
         return PSD
 

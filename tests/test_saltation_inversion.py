@@ -44,7 +44,7 @@ def test_saltation_inversion():
         for j in range(len(f)):
             for k in range(len(D)):
                 res[k] = model.forward_psd(f[j], D[k], H[i], W, theta, r0, qb, D50=D50, tau_c50=tau_c50)
-            PSD_est[j] = np.trapz(y = res * pD, x = D)
+            PSD_est[j] = np.trapezoid(y = res * pD, x = D)
         ave[i] = np.median(PSD_est)
     bed = 10**(PSD_obs/10)/ave
 
