@@ -5,7 +5,7 @@ Implementation of seismic-based bedload transport models, including the **saltat
 ## Features
 
 - Saltation-mode bedload transport model
-- Multi-mode bedload transport model (in testing)
+- Multi-mode bedload transport model (including hop time distribution)
 - Forward modeling for PSD, and backward inversion for bedload flux
 - Support for grain size distributions (pD) in forward and inverse modeling
 
@@ -72,7 +72,7 @@ bedload_flux = bedload_flux * 2700 # to (kg/m/s)
 - ~~Allows grain size distribution (pD) to be called from forward and inverse method~~
 - ~~Implementing empirical models~~
 - ~~Multi-mode model testing, including the hop time distribution~~
-- Update equations for bedload velocity estimation
+- ~~Update equations for bedload velocity estimation~~
 
 ## References
 
