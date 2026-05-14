@@ -118,8 +118,15 @@ class SaltationModel(SeismicBasedBedloadTransportModel):
 
         
         Vp = np.pi * D**3 / 6
-        Ub = 1.56 * np.sqrt(R * self.sediment_params.g * D) *  (transport_stage -1)**0.56
-        Hb = 1.44 * D * (transport_stage - 1)**0.50
+
+        # if transport_stage < 1:
+        #     Ub = 0.0
+        #     Hb = 0.0
+        # else:
+        #     Ub = 1.56 * np.sqrt(R * self.sediment_params.g * D) *  (transport_stage -1)**0.56
+        #     Hb = 1.44 * D * (transport_stage - 1)**0.50
+        Ub = 1.56 * np.sqrt(R * self.sediment_params.g * D) *  (transport_stage)**0.56
+        Hb = 1.44 * D * (transport_stage)**0.50
 
         if isinstance(tau_c, np.ndarray):
             Ub = np.clip(Ub, 0.0, U)

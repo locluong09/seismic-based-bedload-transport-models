@@ -8,6 +8,8 @@ Implementation of seismic-based bedload transport models, including the **saltat
 - Multi-mode bedload transport model (including hop time distribution)
 - Forward modeling for PSD, and backward inversion for bedload flux
 - Support for grain size distributions (pD) in forward and inverse modeling
+- Turbulence model from Gimbert et al., 2014. 
+- Monte-Carlo based inversion (inspired by eseis package)
 
 ## Installation
 
