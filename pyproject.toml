@@ -1,6 +1,6 @@
 [project]
 name = "seismic_bedload"
-version = "0.1.2"
+version = "0.2.0"
 description = "Seismic based bedload transport models"
 readme = "README.md"
 authors = [
